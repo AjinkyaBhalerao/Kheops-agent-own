@@ -50,9 +50,9 @@ def extract_text_by_fontsize(pdf_url):
 
     for page_layout in extract_pages(pdf_url):
         for element in page_layout:
-            for line in element:
-                thisline = []
-                if isinstance(line, LTTextLine):
+            if isinstance(element, LTTextBoxHorizontal):
+                for line in element:
+                    thisline = []
                     for char in line:
                         if isinstance(char, LTChar):
                             ft = char.fontname
@@ -76,10 +76,9 @@ def extract_text_by_fontsize(pdf_url):
     return font_attr
 
 
-
 def classify_text(font_name, font_size, x):
   # Implement your classification rules here based on font_name, font_size, and y (position)
-  if "Bold" in font_name and font_size > 14 or x > 100:  # Adjust threshold based on your PDFs
+  if "Bold" in font_name and (font_size > 14 or x > 100):  # Adjust threshold based on your PDFs
     return "Title"
   elif "Bold" in font_name and font_size > 13:
     return "Section"
@@ -100,18 +99,24 @@ def process_pdf(pdf_path):
     category = classify_text(font_name, font_size, x)
     # Do something with the classified text and category
     #print(f"{text}, Category: {category}")
-    map = (text, category)
+    map = (category, text)
     l2.append(map)
   return l2
 
 
 def comp(l1, l2):
-    set1 = set([(sentence, category) for category, sentence in l1])
+    # Convert list1 to a set of sentences for efficient comparison
+    set1 = set([(category, sentence) for category, sentence in l1])
 
     combined_sentences = l1[:]
-
+    
+    temp = []
+    for c, s in l1:
+        temp.append(s)
+    
     for category, sentence in l2:
-        if (sentence, category) not in set1:
+    
+        if sentence not in temp:
             combined_sentences.append((category, sentence))
 
     return combined_sentences
@@ -130,10 +135,10 @@ if __name__ == "__main__":
     pdf_path = sys.argv[1]
 
     #L1
-    starting_words = ["Titre", "Title" "Chapitre", "Chapter", "Section", "Sous-section","Sub-section", "Article"]
+    starting_words = ["Titre", "Title" "Chapitre", "Chapter", "Section", "Sous-section","Sub-section", "Paragraphe","Paragraph" ,"Article", "Livre", "Book" ]
     # Extract sentences with specified starting words
     word_sentences = extract_sentences_with_starting_words(pdf_path, starting_words)
-    print(word_sentences[0])
+    #print(word_sentences[0])
 
     l1 = []
     # Print the sentences for each starting word
@@ -146,8 +151,8 @@ if __name__ == "__main__":
     l2 = process_pdf(pdf_path)
 
     naksha = make_map(comp(l1,l2))
-    print(naksha[0])
+    #print(naksha[0])
 
-    outfile = open("output.json", "w") 
-    json.dump(naksha, outfile,indent=2)
+    outfile = open("output.json", "w", encoding = 'utf-8') 
+    json.dump(naksha, outfile,indent=2, ensure_ascii=False)
     outfile.close()
