@@ -1,8 +1,8 @@
 import fitz
-import layoutparser as lp
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import *
 import math
+import re
 import json
 import sys
 
@@ -102,9 +102,9 @@ def extract_text_by_fontsize(pdf_url):
 
 def classify_text(font_name, font_size, x):
   # Classification rules here based on font_name, font_size, and y (position)
-  if "Bold" in font_name and (font_size > 14 or x > 100):  # Threshold based on PDF
+  if re.search(r'Bold', font_name, re.IGNORECASE) and (font_size > 14 or x > 100):  # Threshold based on PDF
     return "Title"
-  elif "Bold" in font_name and font_size > 13:
+  elif re.search(r'Bold', font_name, re.IGNORECASE) and font_size > 13:
     return "Section"
   elif font_size > 8:
     return "Paragraph"
