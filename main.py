@@ -41,6 +41,29 @@ def extract_sentences_with_starting_words(pdf_path, starting_words):
     doc.close()
     return word_sentences
 
+def concat_strings(input_list):
+    result_list = []
+    temp_string = ""
+    prev_attributes = None
+
+    for item in input_list:
+        text, font, size, float_val = item
+        attributes = (font, size, float_val)
+
+        if attributes == prev_attributes:
+            temp_string += " " + text
+        else:
+            if temp_string:
+                result_list.append([temp_string.strip()] + list(prev_attributes))
+            temp_string = text
+            prev_attributes = attributes
+
+    # Append the last concatenated string
+    if temp_string:
+        result_list.append([temp_string.strip()] + list(prev_attributes))
+
+    return result_list
+
 
 def extract_text_by_fontsize(pdf_url):
     extracted_text = ""
@@ -50,35 +73,36 @@ def extract_text_by_fontsize(pdf_url):
 
     for page_layout in extract_pages(pdf_url):
         for element in page_layout:
-            if isinstance(element, LTTextBoxHorizontal):
-                for line in element:
-                    thisline = []
+            for line in element:
+                thisline = []
+                if isinstance(line, LTTextLine):
                     for char in line:
                         if isinstance(char, LTChar):
                             ft = char.fontname
                             sz = math.ceil(char.size)
                             x = char.bbox[0]
-                            
-                            if ft != curr_font or sz != curr_size:
 
-                                l = line.get_text()
-                                thisline.append(l[:-1])
-                                thisline.append(ft)
-                                thisline.append(sz)
-                                thisline.append(x)
+                            #if ft != curr_font or sz != curr_size:
 
-                                font_attr.append(thisline)
-                                #print(thisline)
+                            l = line.get_text()
+                            thisline.append(l[:-1])
+                            thisline.append(ft)
+                            thisline.append(sz)
+                            thisline.append(x)
+                            font_attr.append(thisline)
+                            #print(thisline)
 
-                                curr_font = ft
-                                curr_size = sz                
+                                #curr_font = ft
+                                #curr_size = sz                
                         break
-    return font_attr
+
+    result_list = concat_strings(font_attr)
+    return result_list
 
 
 def classify_text(font_name, font_size, x):
-  # Implement your classification rules here based on font_name, font_size, and y (position)
-  if "Bold" in font_name and (font_size > 14 or x > 100):  # Adjust threshold based on your PDFs
+  # Classification rules here based on font_name, font_size, and y (position)
+  if "Bold" in font_name and (font_size > 14 or x > 100):  # Threshold based on PDF
     return "Title"
   elif "Bold" in font_name and font_size > 13:
     return "Section"
@@ -88,7 +112,7 @@ def classify_text(font_name, font_size, x):
     return "Footer"
 
 
-def process_pdf(pdf_path):
+def process_pdf(pdf_text):
   l2 = []
   for line_attr in pdf_text:
     
@@ -134,7 +158,6 @@ if __name__ == "__main__":
         sys.exit(1)
     pdf_path = sys.argv[1]
 
-    #L1
     starting_words = ["Titre", "Title" "Chapitre", "Chapter", "Section", "Sous-section","Sub-section", "Paragraphe","Paragraph" ,"Article", "Livre", "Book" ]
     # Extract sentences with specified starting words
     word_sentences = extract_sentences_with_starting_words(pdf_path, starting_words)
@@ -148,7 +171,7 @@ if __name__ == "__main__":
             l1.append(map)
 
     pdf_text = extract_text_by_fontsize(pdf_path)
-    l2 = process_pdf(pdf_path)
+    l2 = process_pdf(pdf_text)
 
     naksha = make_map(comp(l1,l2))
     #print(naksha[0])
