@@ -50,8 +50,11 @@ def concat_strings(input_list):
         text, font, size, float_val = item
         attributes = (font, size, float_val)
 
-        if attributes == prev_attributes:
-            temp_string += " " + text
+        if attributes == prev_attributes: # and not re.search(r'Bold', font, re.IGNORECASE):
+            if text[0].isupper() and re.search(r'Bold', font, re.IGNORECASE):
+                temp_string = text
+            else:
+                temp_string += " " + text
         else:
             if temp_string:
                 result_list.append([temp_string.strip()] + list(prev_attributes))
@@ -89,11 +92,7 @@ def extract_text_by_fontsize(pdf_url):
                             thisline.append(ft)
                             thisline.append(sz)
                             thisline.append(x)
-                            font_attr.append(thisline)
-                            #print(thisline)
-
-                                #curr_font = ft
-                                #curr_size = sz                
+                            font_attr.append(thisline)        
                         break
 
     result_list = concat_strings(font_attr)
@@ -103,11 +102,11 @@ def extract_text_by_fontsize(pdf_url):
 def classify_text(font_name, font_size, x):
   # Classification rules here based on font_name, font_size, and y (position)
   if re.search(r'Bold', font_name, re.IGNORECASE) and (font_size > 14 or x > 100):  # Threshold based on PDF
-    return "Title"
+    return "Titre"
   elif re.search(r'Bold', font_name, re.IGNORECASE) and font_size > 13:
     return "Section"
   elif font_size > 8:
-    return "Paragraph"
+    return "Paragraphe"
   else:
     return "Footer"
 
@@ -143,14 +142,33 @@ def comp(l1, l2):
         if sentence not in temp:
             combined_sentences.append((category, sentence))
 
-    return combined_sentences
+    def sort_key(item):
+    # Get the first key in the dictionary and return it
+        return next(iter(item))
+
+    # Sort the list of dictionaries
+    sorted_data = sorted(combined_sentences, key=sort_key)
+    
+    return sorted_data    
+
 
 def make_map(suchi):
     naksha = {}
     for i, (c, s)  in enumerate(suchi):
         naksha[i] = {"Category": c, "Text":s}
 
-    return naksha
+    unique_map = {}
+    for key, value in naksha.items():
+        if value not in unique_map.values():
+            unique_map[key] = value
+
+    res = {}
+    i = 0
+    for key, value in unique_map.items():
+        res[i] = value
+        i += 1
+    
+    return res
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -158,13 +176,11 @@ if __name__ == "__main__":
         sys.exit(1)
     pdf_path = sys.argv[1]
 
-    starting_words = ["Titre", "Title" "Chapitre", "Chapter", "Section", "Sous-section","Sub-section", "Paragraphe","Paragraph" ,"Article", "Livre", "Book" ]
+    starting_words = ["Titre", "Title", "Chapitre", "Chapter", "Section", "Sous-section","Sub-section", "Paragraphe","Paragraph" ,"Article", "Livre", "Book" ]
     # Extract sentences with specified starting words
     word_sentences = extract_sentences_with_starting_words(pdf_path, starting_words)
-    #print(word_sentences[0])
 
     l1 = []
-    # Print the sentences for each starting word
     for i, word in enumerate(starting_words):
         for sentence in word_sentences[i]:
             map = (word, sentence)
@@ -172,9 +188,9 @@ if __name__ == "__main__":
 
     pdf_text = extract_text_by_fontsize(pdf_path)
     l2 = process_pdf(pdf_text)
-
-    naksha = make_map(comp(l1,l2))
-    #print(naksha[0])
+    
+    compare = comp(l1,l2)
+    naksha = make_map(compare)
 
     outfile = open("output.json", "w", encoding = 'utf-8') 
     json.dump(naksha, outfile,indent=2, ensure_ascii=False)
