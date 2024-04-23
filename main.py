@@ -6,13 +6,15 @@ import re
 import json
 import sys
 
-
 def extract_sentences_with_starting_words(pdf_path, starting_words):
     doc = fitz.open(pdf_path)
     word_sentences = [[] for _ in range(len(starting_words))]
     current_word = None
     previous_line_empty = False
     previous_line_word = None
+
+    # Get footers to check later if line is a footer
+    footers = get_footers(doc)
 
     for page in doc:
         text = page.get_text()
@@ -28,7 +30,7 @@ def extract_sentences_with_starting_words(pdf_path, starting_words):
                         break
                 else:
                     # Append the line to the current sentence if a starting word is detected in the previous line
-                    if current_word is not None:
+                    if current_word is not None and line not in footers:
                         word_sentences[current_word][-1] += ' ' + line.strip()
                         previous_line_word = current_word
             elif previous_line_word is not None and not previous_line_empty:
@@ -40,6 +42,19 @@ def extract_sentences_with_starting_words(pdf_path, starting_words):
 
     doc.close()
     return word_sentences
+
+def get_footers(fitz_doc):
+    footers = []
+    for page in fitz_doc:
+        data = page.get_text("blocks")
+        h = page.rect.height
+
+        for l in data:
+            if l[1] > 0.90*h:
+                text = l[4]
+                footers.append(text[:-1]) # remove the newline character at end of footer
+
+    return footers
 
 def concat_strings(input_list):
     result_list = []
